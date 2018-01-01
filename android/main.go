@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -14,7 +15,7 @@ import (
 	jump "github.com/faceair/youjumpijump"
 )
 
-var similar *jump.Similar
+var train *jump.Train
 
 func screenshot(filename string) image.Image {
 	_, err := exec.Command("/system/bin/screencap", "-p", filename).Output()
@@ -60,7 +61,22 @@ func main() {
 		}
 	}
 
-	similar = jump.NewSimilar(inputRatio)
+	out, err := exec.Command("/system/bin/sh", "/system/bin/wm", "size").Output()
+	if err != nil {
+		panic("wm size failed")
+	}
+
+	log.Printf("Get %s", out)
+	size := regexp.MustCompile(`(\d+)x(\d+)`).FindStringSubmatch(string(out))
+	width, err := strconv.Atoi(size[1])
+	if err != nil {
+		panic("wm size failed")
+	}
+	height, err := strconv.Atoi(size[2])
+	if err != nil {
+		panic("wm size failed")
+	}
+	train = jump.NewTrain(width, height, inputRatio, "Android")
 
 	for {
 		jump.Debugger()
@@ -78,7 +94,7 @@ func main() {
 
 		scale := float64(src.Bounds().Max.X) / 720
 		nowDistance := jump.Distance(start, end)
-		similarDistance, nowRatio := similar.Find(nowDistance)
+		similarDistance, nowRatio := train.Find(nowDistance)
 
 		log.Printf("from:%v to:%v distance:%.2f similar:%.2f ratio:%v press:%.2fms ", start, end, nowDistance, similarDistance, nowRatio, nowDistance*nowRatio)
 
@@ -96,8 +112,8 @@ func main() {
 				finallyDistance := jump.Distance(start, finally)
 				finallyRatio := (nowDistance * nowRatio) / finallyDistance
 
-				if finallyRatio > nowRatio/2 && finallyRatio < nowRatio*2 {
-					similar.Add(finallyDistance, finallyRatio)
+				if finallyRatio > nowRatio/4*3 && finallyRatio < nowRatio*4/3 {
+					train.Add(finallyDistance, finallyRatio)
 				}
 			}
 		}()

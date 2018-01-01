@@ -15,7 +15,7 @@ import (
 	jump "github.com/faceair/youjumpijump"
 )
 
-var similar *jump.Similar
+var train *jump.Train
 
 var r = jump.NewRequest()
 
@@ -74,7 +74,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	similar = jump.NewSimilar(inputRatio)
+	_, src := screenshot(ip)
+	train = jump.NewTrain(src.Bounds().Max.X, src.Bounds().Max.Y, inputRatio, "iOS")
 
 	for {
 		jump.Debugger()
@@ -95,7 +96,7 @@ func main() {
 		}
 
 		nowDistance := jump.Distance(start, end)
-		similarDistance, nowRatio := similar.Find(nowDistance)
+		similarDistance, nowRatio := train.Find(nowDistance)
 
 		log.Printf("from:%v to:%v distance:%.2f similar:%.2f ratio:%v press:%.2fms ", start, end, nowDistance, similarDistance, nowRatio, nowDistance*nowRatio)
 
@@ -121,8 +122,8 @@ func main() {
 				finallyDistance := jump.Distance(start, finally)
 				finallyRatio := (nowDistance * nowRatio) / finallyDistance
 
-				if finallyRatio > nowRatio/2 && finallyRatio < nowRatio*2 {
-					similar.Add(finallyDistance, finallyRatio)
+				if finallyRatio > nowRatio/4*3 && finallyRatio < nowRatio*4/3 {
+					train.Add(finallyDistance, finallyRatio)
 				}
 			}
 		}()
