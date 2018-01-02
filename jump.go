@@ -93,6 +93,13 @@ func colorSimilar(a, b [3]int, distance float64) bool {
 }
 
 func Find(src image.Image) ([]int, []int) {
+	start := time.Now()
+	edge := EdgeDetection(src, 100.0)
+	log.Printf("EdgeDetection took %s", time.Since(start))
+	edgeF, _ := os.OpenFile("jump.edge.png", os.O_WRONLY|os.O_CREATE, 0600)
+	png.Encode(edgeF, edge)
+	edgeF.Close()
+
 	src = resize.Resize(720, 0, src, resize.Lanczos3)
 	f, _ := os.OpenFile("jump.720.png", os.O_WRONLY|os.O_CREATE, 0600)
 	png.Encode(f, src)
