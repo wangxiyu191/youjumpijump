@@ -14,13 +14,6 @@ func EdgeDetection(pic image.Image, QE float64) image.Image {
 	for y := 0; y < limit.Y; y++ {
 		for x := 0; x < limit.X; x++ {
 
-			img.Set(x, y, color.NRGBA{
-				R: uint8((0) & 255),
-				G: uint8((0) << 1 & 255),
-				B: uint8((0) << 2 & 255),
-				A: 255,
-			})
-
 			var sum float64
 
 			pixelO := pic.At(x, y)
@@ -50,6 +43,13 @@ func EdgeDetection(pic image.Image, QE float64) image.Image {
 					R: uint8((255) & 255),
 					G: uint8((255) << 1 & 255),
 					B: uint8((255) << 2 & 255),
+					A: 255,
+				})
+			} else {
+				img.Set(x, y, color.NRGBA{
+					R: uint8((0) & 255),
+					G: uint8((0) << 1 & 255),
+					B: uint8((0) << 2 & 255),
 					A: 255,
 				})
 			}
