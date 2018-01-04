@@ -35,8 +35,8 @@ func init() {
 }
 
 func Debugger() {
-	if ok, _ := Exists(basePath + "/jump.png"); ok {
-		os.Rename(basePath+"/jump.png", basePath+"/debugger/"+strconv.Itoa(TimeStamp())+".png")
+	if ok, _ := Exists(basePath + "/jump.720.png"); ok {
+		os.Rename(basePath+"/jump.720.png", basePath+"/debugger/"+strconv.Itoa(TimeStamp())+".png")
 
 		files, err := ioutil.ReadDir(basePath + "/debugger/")
 		if err != nil {
