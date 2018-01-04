@@ -1,9 +1,9 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"image"
-	"image/png"
 	"log"
 	"os"
 	"os/exec"
@@ -16,21 +16,14 @@ import (
 
 var similar *jump.Similar
 
-func screenshot(filename string) image.Image {
-	_, err := exec.Command("/system/bin/screencap", "-p", filename).Output()
+func screenshot() image.Image {
+	out, err := exec.Command("/system/bin/screencap").Output()
 	if err != nil {
 		panic("screenshot failed")
 	}
-
-	inFile, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-	src, err := png.Decode(inFile)
-	if err != nil {
-		panic(err)
-	}
-	inFile.Close()
+	bound := image.Rect(0, 0, int(binary.LittleEndian.Uint32(out[0:])), int(binary.LittleEndian.Uint32(out[4:])))
+	src := image.NewRGBA(bound)
+	src.Pix = out[12:]
 	return src
 }
 
@@ -66,7 +59,7 @@ func main() {
 	for {
 		jump.Debugger()
 
-		src := screenshot("jump.png")
+		src := screenshot()
 
 		start, end := jump.Find(src)
 		if start == nil {
@@ -94,7 +87,7 @@ func main() {
 			// TODO: https://github.com/faceair/youjumpijump/issues/61
 			return
 			time.Sleep(time.Millisecond * 170)
-			src := screenshot("jump.test.png")
+			src := screenshot()
 
 			finally, _ := jump.Find(src)
 			if finally != nil {
