@@ -82,6 +82,13 @@ func getRGB(nowColor []int, src *image.RGBA, x int, y int) {
 	}
 }
 
+func setRGB(nowColor []int, src *image.RGBA, x int, y int) {
+	offest := src.PixOffset(x, y)
+	for i := 0; i < 3; i++ {
+		src.Pix[offest+i] = uint8(nowColor[i])
+	}
+}
+
 func colorSimilar(a, b []int, distance float64) bool {
 	return (math.Abs(float64(a[0]-b[0])) < distance) && (math.Abs(float64(a[1]-b[1])) < distance) && (math.Abs(float64(a[2]-b[2])) < distance)
 }
@@ -112,7 +119,10 @@ func Find(src_raw image.Image) ([]int, []int) {
 		src.Pix = src_raw.(*image.NRGBA64).Pix
 		src.Stride = src_raw.(*image.NRGBA64).Stride
 	}
-
+	debugImg := image.NewRGBA(src_raw.Bounds())
+	copy(debugImg.Pix, src.Pix)
+	redColor := []int{255, 0, 0}
+	blueColor := []int{0, 0, 255}
 	jumpCubeColor := []int{54, 52, 92}
 	points := [][]int{}
 
@@ -124,6 +134,7 @@ func Find(src_raw image.Image) ([]int, []int) {
 
 			if colorSimilar(nowColor, jumpCubeColor, 20) {
 				line++
+				setRGB(redColor, debugImg, x, y)
 			} else {
 				if y > 350 && x-line > 10 && line > 30 {
 					points = append(points, []int{x - line/2, y, line})
@@ -152,6 +163,7 @@ func Find(src_raw image.Image) ([]int, []int) {
 			getRGB(nowColor, src, x, y)
 			if !colorSimilar(nowColor, bgColor, 5) {
 				line++
+				setRGB(blueColor, debugImg, x, y)
 			} else {
 				if y > 350 && x-line > 10 && line > 35 && ((x-line/2) < (jumpCube[0]-20) || (x-line/2) > (jumpCube[0]+20)) {
 					possible = append(possible, []int{x - line/2, y, line, x})
@@ -170,6 +182,12 @@ func Find(src_raw image.Image) ([]int, []int) {
 		}
 	}
 	target = []int{target[0], target[1]}
+
+	go func() {
+		f, _ := os.OpenFile("jump.720.debug.png", os.O_WRONLY|os.O_CREATE, 0600)
+		png.Encode(f, debugImg)
+		f.Close()
+	}()
 
 	return jumpCube, target
 }
