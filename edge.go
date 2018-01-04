@@ -2,22 +2,26 @@ package jump
 
 import (
 	"image"
-	"image/color"
 	"math"
 )
 
-func EdgeDetection(pic image.Image, QE float64) image.Image {
+func edgeDetection(pic image.Image, QE float64) [][]int {
 	limit := pic.Bounds().Size()
 
-	img := image.NewNRGBA(image.Rect(0, 0, limit.X, limit.Y))
+	img := [][]int{}
+	for x := 0; x < limit.X; x++ {
+		line := []int{}
 
-	for y := 0; y < limit.Y; y++ {
-		for x := 0; x < limit.X; x++ {
+		for y := 0; y < limit.Y; y++ {
+			if (x < ExcludedWeight || x > limit.X-ExcludedWeight) ||
+				(y < ExcludedHeight || y > limit.Y-ExcludedHeight) {
+				line = append(line, 0)
+				continue
+			}
 
-			var sum float64
-
-			pixelO := pic.At(x, y)
-			x2, y2, z2, _ := pixelO.RGBA()
+			sum := 0.0
+			pixeloO := pic.At(x, y)
+			x2, y2, z2, _ := pixeloO.RGBA()
 
 			for _, offsetX := range []int{-1, 0, 1} {
 				for _, offsetY := range []int{-1, 0, 1} {
@@ -37,23 +41,13 @@ func EdgeDetection(pic image.Image, QE float64) image.Image {
 			}
 
 			avg := sum / 8
-
 			if avg < 65536/QE {
-				img.Set(x, y, color.NRGBA{
-					R: uint8((255) & 255),
-					G: uint8((255) << 1 & 255),
-					B: uint8((255) << 2 & 255),
-					A: 255,
-				})
+				line = append(line, 0)
 			} else {
-				img.Set(x, y, color.NRGBA{
-					R: uint8((0) & 255),
-					G: uint8((0) << 1 & 255),
-					B: uint8((0) << 2 & 255),
-					A: 255,
-				})
+				line = append(line, 1)
 			}
 		}
+		img = append(img, line)
 	}
 
 	return img
