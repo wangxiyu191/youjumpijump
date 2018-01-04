@@ -127,6 +127,15 @@ func Find(src_raw image.Image) ([]int, []int) {
 	points := [][]int{}
 
 	nowColor := []int{0, 0, 0}
+
+	bgColors := [][]int{}
+
+	for y := 0; y < h; y++ {
+		bgColor := []int{0, 0, 0}
+		getRGB(bgColor, src, w-25, y)
+		bgColors = append(bgColors, bgColor)
+	}
+
 	for y := 0; y < h; y++ {
 		line := 0
 		for x := 0; x < w; x++ {
@@ -134,6 +143,7 @@ func Find(src_raw image.Image) ([]int, []int) {
 
 			if colorSimilar(nowColor, jumpCubeColor, 20) {
 				line++
+				setRGB(bgColors[y], src, x, y)
 				setRGB(redColor, debugImg, x, y)
 			} else {
 				if y > 350 && x-line > 10 && line > 30 {
@@ -154,34 +164,37 @@ func Find(src_raw image.Image) ([]int, []int) {
 		return nil, nil
 	}
 
-	possible := [][]int{}
-	for y := 0; y < h; y++ {
-		line := 0
-		bgColor := []int{0, 0, 0}
-		getRGB(bgColor, src, w-25, y)
-		for x := 0; x < w; x++ {
+	// possible := [][]int{}
+
+	minHeight := h
+	minHeightX := -1
+
+	for x := 0; x < w; x++ {
+		for y := 350; y < h; y++ {
+			bgColor := bgColors[y]
 			getRGB(nowColor, src, x, y)
 			if !colorSimilar(nowColor, bgColor, 5) {
-				line++
-				setRGB(blueColor, debugImg, x, y)
-			} else {
-				if y > 350 && x-line > 10 && line > 35 && ((x-line/2) < (jumpCube[0]-20) || (x-line/2) > (jumpCube[0]+20)) {
-					possible = append(possible, []int{x - line/2, y, line, x})
+				if y < minHeight {
+					minHeight = y
+					minHeightX = x
 				}
-				line = 0
 			}
+
 		}
 	}
-	if len(possible) == 0 {
-		return jumpCube, nil
-	}
-	target := possible[0]
-	for _, point := range possible {
-		if point[3] > target[3] && point[1]-target[1] <= 5 {
-			target = point
+
+	target := []int{minHeightX, minHeight + 70}
+	for x := target[0] - 5; x < target[0]+5; x++ {
+		for y := target[1] - 5; y < target[1]+5; y++ {
+			setRGB(blueColor, debugImg, x, y)
 		}
 	}
-	target = []int{target[0], target[1]}
+
+	for x := jumpCube[0] - 5; x < jumpCube[0]+5; x++ {
+		for y := jumpCube[1] - 5; y < jumpCube[1]+5; y++ {
+			setRGB(blueColor, debugImg, x, y)
+		}
+	}
 
 	go func() {
 		f, _ := os.OpenFile("jump.720.debug.png", os.O_WRONLY|os.O_CREATE, 0600)
