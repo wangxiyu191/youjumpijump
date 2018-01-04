@@ -75,39 +75,54 @@ func Distance(a, b []int) float64 {
 	return math.Pow(math.Pow(float64(a[0]-b[0]), 2)+math.Pow(float64(a[1]-b[1]), 2), 0.5)
 }
 
-func getRGB(m color.Model, c color.Color) [3]int {
-	if m == color.RGBAModel {
-		return [3]int{int(c.(color.RGBA).R), int(c.(color.RGBA).G), int(c.(color.RGBA).B)}
-	} else if m == color.RGBA64Model {
-		return [3]int{int(c.(color.RGBA64).R), int(c.(color.RGBA64).G), int(c.(color.RGBA64).B)}
-	} else if m == color.NRGBAModel {
-		return [3]int{int(c.(color.NRGBA).R), int(c.(color.NRGBA).G), int(c.(color.NRGBA).B)}
-	} else if m == color.NRGBA64Model {
-		return [3]int{int(c.(color.NRGBA64).R), int(c.(color.NRGBA64).G), int(c.(color.NRGBA64).B)}
+func getRGB(nowColor []int, src *image.RGBA, x int, y int) {
+	offest := src.PixOffset(x, y)
+	for i := 0; i < 3; i++ {
+		nowColor[i] = int(src.Pix[offest+i])
 	}
-	return [3]int{0, 0, 0}
 }
 
-func colorSimilar(a, b [3]int, distance float64) bool {
+func colorSimilar(a, b []int, distance float64) bool {
 	return (math.Abs(float64(a[0]-b[0])) < distance) && (math.Abs(float64(a[1]-b[1])) < distance) && (math.Abs(float64(a[2]-b[2])) < distance)
 }
 
-func Find(src image.Image) ([]int, []int) {
-	src = resize.Resize(720, 0, src, resize.Lanczos3)
-	f, _ := os.OpenFile("jump.720.png", os.O_WRONLY|os.O_CREATE, 0600)
-	png.Encode(f, src)
-	f.Close()
+func Find(src_raw image.Image) ([]int, []int) {
+	src_raw = resize.Resize(720, 0, src_raw, resize.NearestNeighbor)
+	go func() {
+		f, _ := os.OpenFile("jump.720.png", os.O_WRONLY|os.O_CREATE, 0600)
+		png.Encode(f, src_raw)
+		f.Close()
+	}()
 
-	bounds := src.Bounds()
+	bounds := src_raw.Bounds()
 	w, h := bounds.Max.X, bounds.Max.Y
 
-	jumpCubeColor := [3]int{54, 52, 92}
+	src := image.NewRGBA(src_raw.Bounds())
+
+	switch src_raw.ColorModel() {
+	case color.RGBAModel:
+		src = src_raw.(*image.RGBA)
+	case color.RGBA64Model:
+		src.Pix = src_raw.(*image.RGBA64).Pix
+		src.Stride = src_raw.(*image.RGBA64).Stride
+	case color.NRGBAModel:
+		src.Pix = src_raw.(*image.NRGBA).Pix
+		src.Stride = src_raw.(*image.NRGBA).Stride
+	case color.NRGBA64Model:
+		src.Pix = src_raw.(*image.NRGBA64).Pix
+		src.Stride = src_raw.(*image.NRGBA64).Stride
+	}
+
+	jumpCubeColor := []int{54, 52, 92}
 	points := [][]int{}
+
+	nowColor := []int{0, 0, 0}
 	for y := 0; y < h; y++ {
 		line := 0
 		for x := 0; x < w; x++ {
-			c := src.At(x, y)
-			if colorSimilar(getRGB(src.ColorModel(), c), jumpCubeColor, 20) {
+			getRGB(nowColor, src, x, y)
+
+			if colorSimilar(nowColor, jumpCubeColor, 20) {
 				line++
 			} else {
 				if y > 350 && x-line > 10 && line > 30 {
@@ -131,10 +146,11 @@ func Find(src image.Image) ([]int, []int) {
 	possible := [][]int{}
 	for y := 0; y < h; y++ {
 		line := 0
-		bgColor := getRGB(src.ColorModel(), src.At(w-25, y))
+		bgColor := []int{0, 0, 0}
+		getRGB(bgColor, src, w-25, y)
 		for x := 0; x < w; x++ {
-			c := src.At(x, y)
-			if !colorSimilar(getRGB(src.ColorModel(), c), bgColor, 5) {
+			getRGB(nowColor, src, x, y)
+			if !colorSimilar(nowColor, bgColor, 5) {
 				line++
 			} else {
 				if y > 350 && x-line > 10 && line > 35 && ((x-line/2) < (jumpCube[0]-20) || (x-line/2) > (jumpCube[0]+20)) {
