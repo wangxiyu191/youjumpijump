@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
+	"runtime/pprof"
 	"strconv"
 	"time"
 
@@ -35,7 +36,14 @@ func screenshot(filename string) image.Image {
 }
 
 func main() {
+	var err error
+	pro_f, err := os.Create("cpu-profile.prof")
+	if err != nil {
+		log.Fatal(err)
+	}
+	pprof.StartCPUProfile(pro_f)
 	defer func() {
+		pprof.StopCPUProfile()
 		jump.Debugger()
 		if e := recover(); e != nil {
 			log.Printf("%s: %s", e, debug.Stack())
@@ -46,7 +54,7 @@ func main() {
 	}()
 
 	var inputRatio float64
-	var err error
+
 	if len(os.Args) > 1 {
 		inputRatio, err = strconv.ParseFloat(os.Args[1], 10)
 		if err != nil {
@@ -85,7 +93,7 @@ func main() {
 
 		log.Printf("from:%v to:%v distance:%.2f similar:%.2f ratio:%v press:%.2fms ", start, end, nowDistance, similarDistance, nowRatio, nowDistance*nowRatio)
 
-		_, err = exec.Command("/system/bin/sh", "/system/bin/input", "swipe", strconv.FormatFloat(float64(start[0])*scale, 'f', 0, 32), strconv.FormatFloat(float64(start[1])*scale, 'f', 0, 32), strconv.FormatFloat(float64(end[0])*scale, 'f', 0, 32), strconv.FormatFloat(float64(end[1])*scale, 'f', 0, 32), strconv.Itoa(int(nowDistance*nowRatio))).Output()
+		_, err = exec.Command("/system/bin/sh", "/system/bin/input", "swipe", strconv.FormatFloat(float64(start[0])*scale, 'f', 0, 32), strconv.FormatFloat(float64(start[1])*scale, 'f', 0, 32), strconv.FormatFloat(float64(start[0])*scale, 'f', 0, 32), strconv.FormatFloat(float64(start[1])*scale, 'f', 0, 32), strconv.Itoa(int(nowDistance*nowRatio))).Output()
 		if err != nil {
 			panic("touch failed")
 		}

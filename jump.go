@@ -72,7 +72,7 @@ func TimeStamp() int {
 }
 
 func Distance(a, b []int) float64 {
-	return math.Pow(math.Pow(float64(a[0]-b[0]), 2)+math.Pow(float64(a[1]-b[1]), 2), 0.5)
+	return math.Pow(math.Pow(float64(a[0]-b[0]), 2)+math.Pow(float64(a[1]-b[1])*1.725, 2), 0.5)
 }
 
 func getRGB(nowColor []int, src *image.RGBA, x int, y int) {
@@ -91,6 +91,41 @@ func setRGB(nowColor []int, src *image.RGBA, x int, y int) {
 
 func colorSimilar(a, b []int, distance float64) bool {
 	return (math.Abs(float64(a[0]-b[0])) < distance) && (math.Abs(float64(a[1]-b[1])) < distance) && (math.Abs(float64(a[2]-b[2])) < distance)
+}
+
+func detectType(src *image.RGBA, debugImg *image.RGBA, minHeightX int, minHeight int) []int {
+	target := []int{0, 0}
+	//redColor := []int{255, 0, 0}
+	blueColor := []int{0, 0, 255}
+	//detect type
+	targetColor := []int{0, 0, 0}
+	getRGB(targetColor, src, minHeightX, minHeight+3)
+	setRGB(blueColor, debugImg, minHeightX, minHeight)
+	guessPointColor := []int{0, 0, 0}
+
+	getRGB(guessPointColor, src, minHeightX-137, minHeight+84)
+	setRGB(blueColor, debugImg, minHeightX-137, minHeight+84)
+	if colorSimilar(targetColor, guessPointColor, 5) {
+		log.Println("type 0")
+		target[1] = 75
+		return target
+	}
+
+	getRGB(guessPointColor, src, minHeightX-115, minHeight+65)
+	setRGB(blueColor, debugImg, minHeightX-115, minHeight+65)
+	if colorSimilar(targetColor, guessPointColor, 5) { // big square
+		log.Println("type 1")
+		target[1] = 56
+		return target
+	}
+
+	getRGB(guessPointColor, src, minHeightX-95, minHeight+56)
+	if colorSimilar(targetColor, guessPointColor, 5) {
+		target[1] = 56
+		log.Println("type 2")
+		return target
+	}
+	return target
 }
 
 func Find(src_raw image.Image) ([]int, []int) {
@@ -159,15 +194,15 @@ func Find(src_raw image.Image) ([]int, []int) {
 			jumpCube = point
 		}
 	}
-	jumpCube = []int{jumpCube[0], jumpCube[1]}
+	jumpCube = []int{jumpCube[0], jumpCube[1] + 5}
 	if jumpCube[0] == 0 {
 		return nil, nil
 	}
 
-	// possible := [][]int{}
-
 	minHeight := h
 	minHeightX := -1
+	startX := -1
+	endX := -1
 
 	for x := 0; x < w; x++ {
 		for y := 350; y < h; y++ {
@@ -177,13 +212,26 @@ func Find(src_raw image.Image) ([]int, []int) {
 				if y < minHeight {
 					minHeight = y
 					minHeightX = x
+					startX = x
+				} else if y == minHeight {
+					endX = x
 				}
 			}
 
 		}
 	}
 
-	target := []int{minHeightX, minHeight + 70}
+	if startX != -1 && endX != -1 {
+		minHeightX = (startX + endX) / 2
+	}
+
+	//target_offest := detectType(src, debugImg, minHeightX, minHeight)
+
+	//target[0] += target_offest[0]
+	//target[1] += target_offest[1]
+
+	target := []int{minHeightX, int(654 - math.Abs((float64(minHeightX)-375)/1.725))}
+
 	for x := target[0] - 5; x < target[0]+5; x++ {
 		for y := target[1] - 5; y < target[1]+5; y++ {
 			setRGB(blueColor, debugImg, x, y)
@@ -195,6 +243,35 @@ func Find(src_raw image.Image) ([]int, []int) {
 			setRGB(blueColor, debugImg, x, y)
 		}
 	}
+	// possible := [][]int{}
+
+	// for y := 0; y < h; y++ {
+	// 	line := 0
+	// 	bgColor := []int{0, 0, 0}
+	// 	getRGB(bgColor, src, w-25, y)
+	// 	for x := 0; x < w; x++ {
+	// 		getRGB(nowColor, src, x, y)
+	// 		if !colorSimilar(nowColor, bgColor, 5) {
+	// 			line++
+	// 			setRGB(blueColor, debugImg, x, y)
+	// 		} else {
+	// 			if y > 350 && x-line > 10 && line > 35 && ((x-line/2) < (jumpCube[0]-20) || (x-line/2) > (jumpCube[0]+20)) {
+	// 				possible = append(possible, []int{x - line/2, y, line, x})
+	// 			}
+	// 			line = 0
+	// 		}
+	// 	}
+	// }
+	// if len(possible) == 0 {
+	// 	return jumpCube, nil
+	// }
+	// target := possible[0]
+	// for _, point := range possible {
+	// 	if point[3] > target[3] && point[1]-target[1] <= 5 {
+	// 		target = point
+	// 	}
+	// }
+	// target = []int{target[0], target[1]}
 
 	go func() {
 		f, _ := os.OpenFile("jump.720.debug.png", os.O_WRONLY|os.O_CREATE, 0600)
